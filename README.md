@@ -12,6 +12,10 @@ The datasheet [1] offers all the sources I needed, most importantly Figure 36-5 
 ![Capture Mode](https://raw.githubusercontent.com/petl/ArduinoDueCounter/master/Fig36.5._Capture_Mode.PNG)
 
 
+The output on the Console prints the Capture Register value and the corresponding time difference. 
+![Example output](https://raw.githubusercontent.com/petl/ArduinoDueCounter/master/Output.PNG)
+
+
 The resolution is 23ns (1/42MHz).
 
 
