@@ -11,6 +11,10 @@ There are two versions in the repository. One for finding a fault where the comp
 The datasheet [1] offers all the sources I needed, most importantly Figure 36-5 Capture Mode:
 ![Capture Mode](https://raw.githubusercontent.com/petl/ArduinoDueCounter/master/Fig36.5._Capture_Mode.PNG)
 
+
+The resolution is 23ns (1/42MHz).
+
+
 [0] https://forum.arduino.cc/index.php?topic=400516.0
 
 [1] https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-11057-32-bit-Cortex-M3-Microcontroller-SAM3X-SAM3A_Datasheet.pdf
