@@ -7,41 +7,25 @@
  * Copied as much as possible from here: https://forum.arduino.cc/index.php?topic=400516.0
  */
 
-volatile uint32_t CaptureCountA, TimerCount;
+volatile uint32_t CaptureCountA;
 volatile boolean CaptureFlag;
 
 //To test the shit
 //Connect Pins 7, 11, 12 to each other to test with the rising and falling edge of the PWM
 #define ANALOG_PIN 7
-#define ANALOG_VALUE 127 // values in the interval [0,255] 
+#define ANALOG_VALUE 123 // values in the interval [0,255] 
 
 
 void setup() {
   SerialUSB.begin(115200);
+  SerialUSB.println("We're ready to rumble");
 
   //To test
   pinMode( ANALOG_PIN, OUTPUT); //connect to AN-7 for Testing
+  SerialUSB.println("Connect Pins 7, 11, 12 to each other to test with the rising and falling edge of the PWM");
   analogWrite(ANALOG_PIN,ANALOG_VALUE);
 
-  PMC->PMC_PCER1 |= PMC_PCER1_PID35;                      // Timer Counter Channel 8 is TC8 (Table 9-1. Peripheral Identifiers)
-  TC2->TC_CHANNEL[2].TC_CCR = TC_CCR_CLKDIS ;             // disable internal clocking while setup regs
-  TC2->TC_CHANNEL[2].TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1   // capture mode, MCK/2, clk on rising edge                           
-                              | TC_CMR_ETRGEDG_RISING      // The clock is gated by an rising edge of TIOB (TIOB default).
-                              //| TC_CMR_ABETRG         //TIOA is used as an external trigger
-                              | TC_CMR_LDRA_RISING  // load RA on rising edge of TIOA
-                              //| TC_CMR_LDRB_FALLING // load RB on falling edge of TIOA
-                              ;       
-
-  TC2->TC_CHANNEL[2].TC_IER |= TC_IER_LDRAS;               // Trigger interruption on Load RA 
-  TC2->TC_CHANNEL[2].TC_IDR |= ~TC_IER_LDRAS;               // Trigger interruption on Load RA 
-  TC2->TC_CHANNEL[2].TC_CCR = TC_CCR_CLKEN ;  // Clock  enable and software trigger
-
-  
-  NVIC_DisableIRQ(TC8_IRQn);    //Disable Interrupts
-  NVIC_ClearPendingIRQ(TC8_IRQn); //Clear Interrupts
-  NVIC_SetPriority(TC8_IRQn, 0);  //Set the Interrupt Priority, lower values indicate a higher priority (0-255)
-  NVIC_EnableIRQ(TC8_IRQn);         // Enable TC8 interrupts
-
+  setupCounter(); //call the function below which does the Register magic
 
   SerialUSB.println("Lets go!");
 }
@@ -50,8 +34,8 @@ void loop() {
 
   if (CaptureFlag) {
     CaptureFlag = 0;
-    SerialUSB.print("Capture. Capture Register A: ");
-    SerialUSB.println(CaptureCountA);
+    SerialUSB.print("Capture. Capture Register A: " + String(CaptureCountA));
+    SerialUSB.println(". That's: " + String((float)CaptureCountA*23.8095238/1000) + "µs."); //MCK=84MHz, TC_CMR_TCCLKS_TIMER_CLOCK1==42MHZ^=23,8095ns per countertick
   }
   else {
     SerialUSB.print("No Capture. Counter Value: ");
@@ -109,4 +93,25 @@ void TC8_Handler() {
     CaptureCountA = TC2->TC_CHANNEL[2].TC_RA;        // get data from capture register A for TC2 channel 2 (Counter 8)
   }
   CaptureFlag = 1;                      // set flag indicating a new capture value is present
+}
+
+
+void setupCounter(){
+  PMC->PMC_PCER1 |= PMC_PCER1_PID35;                      // Timer Counter Channel 8 is TC8 (Table 9-1. Peripheral Identifiers)
+  TC2->TC_CHANNEL[2].TC_CCR = TC_CCR_CLKDIS ;             // disable internal clocking while setup regs
+  TC2->TC_CHANNEL[2].TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1   // capture mode, MCK/2, clk on rising edge                           
+                              | TC_CMR_ETRGEDG_RISING      // The clock is gated by an rising edge of TIOB (TIOB default).
+                              //| TC_CMR_ABETRG         //TIOA is used as an external trigger
+                              | TC_CMR_LDRA_FALLING  // load RA (==save value) on falling edge of TIOA
+                              //| TC_CMR_LDRB_FALLING // load RB on falling edge of TIOA
+                              ;       
+
+  TC2->TC_CHANNEL[2].TC_IER |= TC_IER_LDRAS;               // Trigger interruption on Load RA 
+  TC2->TC_CHANNEL[2].TC_CCR = TC_CCR_CLKEN ;  // Clock  enable and software trigger
+
+ 
+  NVIC_ClearPendingIRQ(TC8_IRQn); //Clear Interrupts
+  NVIC_SetPriority(TC8_IRQn, 0);  //Set the Interrupt Priority, lower values indicate a higher priority (0-255)
+  NVIC_EnableIRQ(TC8_IRQn);         // Enable TC8 interrupts
+
 }
